@@ -44,5 +44,3 @@ function master(rxPort, waitTime)
 	log[(pkts - total > 0 and "warn" or "info")](log, "Lost packets: " .. pkts - total
 		.. " (this can happen if the NIC still receives data after this script stops the receive loop)")
 end
-
-

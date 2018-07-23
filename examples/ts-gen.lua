@@ -1,7 +1,7 @@
 local mg     = require "moongen"
 local memory = require "memory"
 local device = require "device"
-local ts     = require "timestamping"
+local ts     = require "ts"
 local stats  = require "stats"
 local hist   = require "histogram"
 
@@ -24,7 +24,7 @@ function configure(parser)
 	parser:description("Generates bidirectional CBR traffic with hardware rate control and measure latencies.")
 	parser:argument("dev1", "Device to transmit/receive from."):convert(tonumber)
 	parser:argument("dev2", "Device to transmit/receive from."):convert(tonumber)
-	parser:option("-r --rate", "Transmit rate in Mbit/s."):default(10000):convert(tonumber)
+	parser:option("-c", "Start CrossTraffic"):default(0)
 	parser:option("-f --file", "Filename of the latency histogram."):default("histogram.csv")
 end
 
@@ -34,11 +34,13 @@ function master(args)
 	device.waitForLinks()
 	-- dev1:getTxQueue(0):setRate(args.rate)
 	-- dev2:getTxQueue(0):setRate(args.rate)
-	-- mg.startTask("loadSlave", dev1:getTxQueue(0))
-	-- if dev1 ~= dev2 then
-	-- 	mg.startTask("loadSlave", dev2:getTxQueue(0))
-	-- end
-	stats.startStatsTask{dev1, dev2}
+	if args.c == 1 then
+		mg.startTask("loadSlave", dev1:getTxQueue(0))
+		if dev1 ~= dev2 then
+			mg.startTask("loadSlave", dev2:getTxQueue(0))
+		end
+	  stats.startStatsTask{dev1, dev2}
+	end
 	mg.startSharedTask("timerSlave", dev1:getTxQueue(1), dev2:getRxQueue(1), args.file)
 	mg.waitForTasks()
 end
@@ -59,11 +61,12 @@ function loadSlave(queue)
 end
 
 function timerSlave(txQueue, rxQueue, histfile)
-	local timestamper = ts:newTimestamper(txQueue, rxQueue)
+	local timestamper = ts:newTS(txQueue, rxQueue)
 	local hist = hist:new()
 	mg.sleepMillis(1000) -- ensure that the load task is running
 	while mg.running() do
-		hist:update(timestamper:measureLatency(function(buf) buf:getEthernetPacket().eth.dst:setString(ETH_DST) end))
+		hist:update(timestamper:startTimesync(function(buf) buf:getEthernetPacket().eth.dst:setString(ETH_DST) end))
+		mg.sleepMillis(1000)
 	end
 	hist:print()
 	hist:save(histfile)
