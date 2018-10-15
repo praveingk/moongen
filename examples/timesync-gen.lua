@@ -15,7 +15,7 @@ local libmoon = require "libmoon"
 
 
 
-local HOST1	= "3c:fd:fe:b7:e7:f4"
+local HOST1	= "6c:b3:11:53:09:9c"
 local HOST2	= "3c:fd:fe:b7:e7:f5"
 local BCAST = "FF:FF:FF:FF:FF:FF"
 local DUMMY_DST = "3c:fd:fe:b7:e7:f9"
@@ -52,7 +52,7 @@ end
 
 function master(args)
   txDev = device.config({port = args.txDev, rxQueues = 2, txQueues = 2})
-	tx1Dev = device.config({port = 1, rxQueues = 2, txQueues = 2})
+	--tx1Dev = device.config({port = 1, rxQueues = 2, txQueues = 2})
   device.waitForLinks()
 	txQueue = txDev:getTxQueue(1)
 	rxQueue = txDev:getRxQueue(1)
@@ -69,7 +69,6 @@ function master(args)
 	end
 	if args.d == 1 then
 	 		printf("Starting to receive CrossTraffic")
-
 			--device.waitForLinks()
 	   	--tx1Dev:getTxQueue(1):setRate(args.rate)
 	  	--mg.startTask("doRecvCrossTraffic", txDev:getTxQueue(0))
@@ -78,7 +77,7 @@ function master(args)
 	end
 	--stats.startStatsTask{txDev, tx1Dev}
    mg.startTask("initiateTimesync", txDev, txQueue, rxQueue, args.file, args.c)
-  	mg.startSharedTask("initiateTimesyncMulti", txDev, tx1Dev:getTxQueue(0), tx1Dev:getRxQueue(0), args.file, args.c)
+   --mg.startSharedTask("initiateTimesyncMulti", txDev, tx1Dev:getTxQueue(0), tx1Dev:getRxQueue(0), args.file, args.c)
    --mg.startTask("initiateTimesyncMulti", txDev, txQueue, rxQueue, args.file, args.c)
 
   mg.waitForTasks()
@@ -166,7 +165,7 @@ function initiateTimesync(txDev, txQueue, rxQueue, file, crossTraffic)
 	while mg.running() do
 		i = i + 1
 		startTimesync(i, mem, txDev, txQueue, rxQueue, fp, crossTraffic)
-		mg.sleepMillis(1)
+		mg.sleepMillis(1000)
 		--mg.sleepMillis(1000)
 	end
 	fp:close();
@@ -618,13 +617,13 @@ function startTimesync2(count, mem, txDev, txQueue, rxQueue, fp, crossTraffic)
 							printf(green("calc_time_lo_ptp = %d ns", calc_time_lo_ptp))
 
 							fp:write(("%d, %d, %d, %d\n"):format(count, txReqTs, calc_time_lo, calc_time_lo_ptp))
-							-- if (switchReqDelay >= 0) then
-							-- 	if (count > 100) then
-							-- 		printf("Not Logging!")
-							-- 	else
-							-- 		fp:write(("%d, %d, %d, %d, %d, %d \n"):format(count, switchReqDelay, switchDelay, respEgressDelay, 2 * wire_delay , lat - (switchDelay + respEgressDelay + (2 * wire_delay))))
-							-- 	end
-							-- end
+							if (switchReqDelay >= 0) then
+								if (count > 100) then
+									printf("Not Logging!")
+								else
+									fp:write(("%d, %d, %d, %d, %d, %d \n"):format(count, switchReqDelay, switchDelay, respEgressDelay, 2 * wire_delay , lat - (switchDelay + respEgressDelay + (2 * wire_delay))))
+								end
+							end
 							rxBufs:freeAll()
 							return
 					end

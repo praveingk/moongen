@@ -318,13 +318,13 @@ function startTimesync(count, mem, txDev, txQueue, rxQueue, fp)
 							rxBufs:freeAll()
 							return calc_time_igref_ptp4, calc_time_igref_ptp, rxTs, capture_tx
 							--fp:write(("%d, %d, %d, %d\n"):format(count, txReqTs, calc_time_lo, calc_time_lo_ptp))
-							-- if (switchReqDelay >= 0) then
-							-- 	if (count > 100) then
-							-- 		printf("Not Logging!")
-							-- 	else
-							-- 		fp:write(("%d, %d, %d, %d, %d, %d \n"):format(count, switchReqDelay, switchDelay, respEgressDelay, 2 * wire_delay , lat - (switchDelay + respEgressDelay + (2 * wire_delay))))
-							-- 	end
-							-- end
+							if (switchReqDelay >= 0) then
+								if (count > 100) then
+									printf("Not Logging!")
+								else
+									fp:write(("%d, %d, %d, %d, %d, %d \n"):format(count, switchReqDelay, switchDelay, respEgressDelay, lat - (switchDelay + respEgressDelay)))
+								end
+							end
 					end
 				end
 	--	end
