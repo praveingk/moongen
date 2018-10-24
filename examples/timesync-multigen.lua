@@ -70,20 +70,20 @@ end
 
 function CrossTraffic(queue)
 	local mem = memory.createMemPool(function(buf)
-		-- buf:getEthernetPacket():fill{
-		-- 	ethSrc = queue,
-		-- 	ethDst = BCAST,
-		-- 	ethType = 0x1234
-		-- }
-		buf:getUdpPacket():fill{
+		buf:getEthernetPacket():fill{
 			ethSrc = queue,
-			ethDst = ETH_SRC,
-			ip4Src = SRC_IP,
-			ip4Dst = DST_IP,
-			udpSrc = SRC_PORT,
-			udpDst = DST_PORT,
-			pktLength = UDP
+			ethDst = SWITCH1,
+			ethType = 0x1234
 		}
+		-- buf:getUdpPacket():fill{
+		-- 	ethSrc = queue,
+		-- 	ethDst = SWITCH1,
+		-- 	ip4Src = SRC_IP,
+		-- 	ip4Dst = DST_IP,
+		-- 	udpSrc = SRC_PORT,
+		-- 	udpDst = DST_PORT,
+		-- 	pktLength = UDP
+		-- }
 	end)
 	local bufs = mem:bufArray()
 
@@ -102,7 +102,7 @@ function initiateTimesync(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queue, rx2Queue
 	local mem1 = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
 			ethSrc = tx1Queue,
-			ethDst = SWITCH1,
+			ethDst = BCAST,--SWITCH1,
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
 		}
@@ -110,7 +110,7 @@ function initiateTimesync(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queue, rx2Queue
 	local mem2 = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
 			ethSrc = tx2Queue,
-			ethDst = SWITCH2,
+			ethDst = BCAST,--SWITCH2,
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
 		}
@@ -118,41 +118,165 @@ function initiateTimesync(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queue, rx2Queue
 	while mg.running() do
 		i = i + 1
 		syncClocks(tx1Dev, tx2Dev)
-		calc_time1_sw, calc_time1_ptp, x1, y1 = startTimesync(i, mem1, tx1Dev, tx1Queue, rx1Queue, fp)
+		calc_time1_dptp, x1, y1 = startTimesync(i, mem1, tx1Dev, tx1Queue, rx1Queue, fp)
 		mg.sleepMillis(1)
-		calc_time2_sw, calc_time2_ptp, x2, y2 = startTimesync(i, mem2, tx2Dev, tx2Queue, rx2Queue, fp)
+		calc_time2_dptp, x2, y2 = startTimesync(i, mem2, tx2Dev, tx2Queue, rx2Queue, fp)
 		drift_factor_avg = 0.000022755
 		drift_factor_median = 0.000022745
 
-		if (x1 ~= nil) then
-
-
+		if (x1 ~= nil and x2~=nil) then
 			local diff_time = x2-x1
 			local drift_avg = diff_time * drift_factor_avg
 			local drift_mean = diff_time * drift_factor_median
-
 			local drift_now = (y2 - y1) - (x2 - x1)
-			printf("%d %d\n", y2-y1, x2-x1)
-			printf("Drift now = %d\n", drift_now)
-			printf("%u:%u::%u:%u", calc_time1_sw + drift_avg, calc_time2_sw, calc_time1_ptp + drift_avg, calc_time2_ptp)
-			printf("%u:%u::%u:%u", calc_time1_sw + drift_mean, calc_time2_sw, calc_time1_ptp + drift_mean, calc_time2_ptp)
-			printf("%u:%u::%u:%u", calc_time1_sw + drift_now, calc_time2_sw, calc_time1_ptp + drift_now, calc_time2_ptp)
 
-			if (calc_time1_sw > 0 and calc_time2_sw > 0) then
-				printf("%d, %d, %d, %d",calc_time2_ptp - calc_time1_ptp - drift_avg, calc_time2_ptp - calc_time1_ptp - drift_mean, calc_time2_sw - calc_time1_sw - drift_avg, calc_time2_sw - calc_time1_sw - drift_mean)
-				printf("%d, %d",calc_time2_ptp - calc_time1_ptp - drift_now, calc_time2_sw - calc_time1_sw - drift_now)
-				fp:write(("%d, %d\n"):format(calc_time2_ptp - calc_time1_ptp - drift_now, calc_time2_sw - calc_time1_sw - drift_now))
+			printf("%d-%d(%d) %d-%d(%d)", y1, y2,y2-y1, x1, x2, x2-x1)
+			printf("Drift now = %d", drift_now)
+			-- printf("%u:%u", calc_time1_dptp + drift_avg,  calc_time2_dptp)
+			-- printf("%u:%u", calc_time1_dptp + drift_mean, calc_time2_dptp)
+			printf("%u:%u", calc_time1_dptp + drift_now,  calc_time2_dptp)
+
+			if (calc_time1_dptp > 0 and calc_time2_dptp > 0) then
+				--printf("%d, %d",calc_time2_dptp - calc_time1_dptp - drift_avg, calc_time2_dptp - calc_time1_dptp - drift_mean)
+				printf("%d, %d",calc_time2_dptp - calc_time1_dptp - drift_now, calc_time2_dptp - calc_time1_dptp)
+				fp:write(("%d, %d\n"):format(calc_time2_dptp - calc_time1_dptp - drift_now, calc_time2_dptp - calc_time1_dptp))
 
 				--fp:write(("%d, %d\n"):format(calc_time2_ptp - calc_time1_ptp - drift_avg, calc_time2_ptp - calc_time1_ptp - drift_mean, calc_time2_sw - calc_time1_sw - drift_avg, calc_time2_sw - calc_time1_sw - drift_mean))
 			end
 		end
-		mg.sleepMillis(1)
+		mg.sleepMillis(1000)
 	end
 	fp:close();
 end
 
 
-function startTimesync(count, mem, txDev, txQueue, rxQueue, fp)
+function startTimesync(count, mem, txDev, txQueue, rxQueue, fp, crossTraffic)
+	local maxWait = 15/1000
+	rxDev = txDev
+	txQueue:enableTimestamps()
+	rxQueue:enableTimestamps()
+	local txBufs = mem:bufArray(1)
+	local rxBufs = mem.bufArray(1)
+	txBufs:alloc(PKT_SIZE)
+	local txBuf = txBufs[1]
+	--printf("Enabling Tx Timestamps..")
+	txBuf:enableTimestamps()
+
+	local lat
+	local lat_2probe
+	local clientDelay_2probe
+	local switchDelay_2probe
+	local switchDelay
+	local switchReqDelay
+	local upstreamOffset
+	local upstreamQueingDelay
+	local rxTs
+	local egTs
+	local macTs
+	local elapsedTs
+	local reference_hi
+	local reference_lo
+	local max_ns = 1000000000
+
+  printf(red("Sending Timesync.."))
+	txBuf:getTimesyncPacket().timesync:setCommand(proto.timesync.TYPE_DELAY_REQ)
+	rxDev:clearTimestamps()
+	txQueue:send(txBufs)
+	local txDelayTs = txQueue:getTimestamp(500)
+
+	txBuf:getTimesyncPacket().timesync:setCommand(proto.timesync.TYPE_REQ)
+	rxDev:clearTimestamps()
+	txQueue:send(txBufs)
+	local txReqTs = txQueue:getTimestamp(500)
+
+	local timer = timer:new(maxWait)
+	while timer:running() do
+		--printf("Waiting")
+		local rx = rxQueue:tryRecv(rxBufs, 1000)
+		--printf("Total packets reev = %d\n", rx)
+		local timestampedPkt = rxDev:hasRxTimestamp()
+		if not timestampedPkt then
+			--printf("Response is not timestamped")
+			rxBufs:freeAll()
+		else
+			--printf("Response is timestamped")
+			for i=1,rx do
+				--printf("Packet %d",i);
+				local rxBuf = rxBufs[i]
+				--rxBuf:dump()
+				local rxPkt = rxBuf:getTimesyncPacket()
+				--rxPkt:dump()
+				if (rxPkt.eth:getType() ~= 0x88f7) then
+					--printf("Cross traffic %X", rxPkt.eth:getType());
+					rxQueue:getTimestamp(nil, timesync)
+					--break;--continue;
+				else
+					if (rxPkt.timesync:getCommand() == proto.timesync.TYPE_RES) then
+						--rxPkt:dump()
+						rxTs = rxQueue:getTimestamp(nil, timesync)
+						printf(green(rxPkt.timesync:getString()))
+						--printf("tx = %u", txReqTs)
+						--printf("rxts = %u", rxTs);
+						if (rxTs == nil) then
+							break
+						end
+						lat = rxTs - txReqTs
+						lat_2probe = rxTs - txDelayTs
+						clientDelay_2probe = txReqTs - txDelayTs
+						reference_lo = rxPkt.timesync:getReference_ts_lo()
+						switchDelay_2probe = rxPkt.timesync:getDelta()
+						elapsedTs = rxPkt.timesync:getIgTs()
+						egTs = rxPkt.timesync:getEgTs()
+						macTs = rxPkt.timesync:getMacTs()
+						switchDelay = rxPkt.timesync:getEgTs() - rxPkt.timesync:getIgTs()
+						switchReqDelay = rxPkt.timesync:getIgTs() - rxPkt.timesync:getMacTs();
+						upstreamOffset = switchDelay_2probe - clientDelay_2probe
+						upstreamQueingDelay = switchDelay_2probe	--(switchDelay_2probe - clientDelay_2probe) + clientDelay_2probe
+						rxBufs:freeAll()
+						break
+					end
+					if (rxPkt.timesync:getCommand() == proto.timesync.TYPE_CAPTURE_TX) then
+							--local capture_tx = rxPkt.timesync:getIgTs()
+							local capture_tx = rxPkt.timesync:getReference_ts_hi()
+							--rxPkt:dump()
+							if (egTs == nil) then
+								return -1,-1,-1
+							end
+							local respEgressDelay = capture_tx - egTs
+							local replydelay_dptp = (lat - (capture_tx - macTs))/2
+
+							printf(green(rxPkt.timesync:getString()))
+							printf("---------------------------------");
+							printf(green("Device = %d", txDev.id))
+							printf(green("Switch Request Delay = %d ns", switchReqDelay))
+							printf(green("Switch Queing Delay = %d ns", switchDelay))
+							printf(green("Switch Response Egress Delay =%d ns", respEgressDelay))
+							printf("---------------------------------");
+							printf(green("Latency = %d ns", lat))
+							printf(green("Unaccounted delay = %d ns", lat - (switchDelay + respEgressDelay)))
+							printf(green("Reply delay       = %d ns", replydelay_dptp))
+							printf("---------------------------------");
+
+							local calc_time_lo_dptp = reference_lo + (capture_tx % max_ns) + (replydelay_dptp % max_ns);
+
+							printf(green("rxReqTs = %d ns", txReqTs))
+							printf(green("capture_tx = %d ns", capture_tx))
+
+							printf(green("calc_time_lo_dptp = %d ns", calc_time_lo_dptp))
+
+							local calc_time_igref_dptp = calc_time_lo_dptp - rxTs
+							rxBufs:freeAll()
+							fp:write(("%d, %d, %d\n"):format(count, txReqTs, calc_time_lo_dptp))
+							return calc_time_igref_dptp, rxTs, capture_tx
+					end
+				end
+			end
+		end
+	end
+	return -1,-1,-1
+end
+
+function startTimesyncOld(count, mem, txDev, txQueue, rxQueue, fp)
 	local maxWait = 15/1000
 
 	rxDev = txDev
@@ -316,8 +440,8 @@ function startTimesync(count, mem, txDev, txQueue, rxQueue, fp)
 							local calc_time_igref_ptp = calc_time_lo_ptp - rxTs --reference_lo + (replydelay_ptp % max_ns) -- switchReqDelay
 							local calc_time_igref_ptp4 = calc_time_lo_ptp4 - rxTs
 							rxBufs:freeAll()
-							return calc_time_igref_ptp4, calc_time_igref_ptp, rxTs, capture_tx
 							fp:write(("%d, %d, %d, %d\n"):format(count, txReqTs, calc_time_lo, calc_time_lo_ptp))
+							return calc_time_igref_ptp4, calc_time_igref_ptp, rxTs, capture_tx
 							-- if (switchReqDelay >= 0) then
 							-- 	if (count > 100) then
 							-- 		printf("Not Logging!")
