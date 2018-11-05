@@ -41,7 +41,7 @@ local HOST9 = "a0:00:00:20:00:0a"
 
 local TYPE_TS = 0x1235
 local PKT_SIZE	= 34
-local UDP_PKT_SIZE = 1000
+local UDP_PKT_SIZE = 1500
 
 local avg_nic_delay = 0
 local LINE_RATE = 10000000000 -- 10 Gbps
@@ -90,7 +90,7 @@ function doRecvCrossTraffic(queue)
 	local mem = memory.createMemPool(function(buf)
 		buf:getEthernetPacket():fill{
 			ethSrc = queue,
-			ethDst = TINA_HOST1,
+			ethDst = MINION_HOST1,
 			ethType = 0x1234
 		}
 		-- buf:getUdpPacket():fill{
@@ -114,16 +114,25 @@ end
 
 function CrossTraffic(queue)
 	local mem = memory.createMemPool(function(buf)
-		buf:getEthernetPacket():fill{
-			ethSrc = TINA_HOST1,
-			ethDst = MINION_HOST2,
-			ethType = 0x1234
+		-- buf:getEthernetPacket():fill{
+		-- 	ethSrc = TINA_HOST1,
+		-- 	ethDst = MINION_HOST2,
+		-- 	ethType = 0x1234
+		-- }
+		buf:getUdpPacket():fill{
+			ethSrc = MINION_HOST1,
+			ethDst = TINA_HOST1,
+			ip4Src = SRC_IP,
+			ip4Dst = DST_IP,
+			udpSrc = SRC_PORT,
+			udpDst = DST_PORT,
+			pktLength = UDP
 		}
 	end)
 	local bufs = mem:bufArray()
 
 	while mg.running() do
-		bufs:alloc(PKT_SIZE)
+		bufs:alloc(UDP_PKT_SIZE)
 		queue:send(bufs)
 	end
 end
@@ -136,7 +145,7 @@ function initiateTimesync(txDev, txQueue, rxQueue, file, crossTraffic)
 	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
 	local mem = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
-			ethSrc = TINA_HOST1,
+			ethSrc = MINION_HOST1,
 			ethDst = BCAST,
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
@@ -248,13 +257,13 @@ function startTimesyncProfile(count, mem, txDev, txQueue, rxQueue, fp, crossTraf
 							end
 							printf(green("Avg NIC Delay = %d", avg_nic_delay))
 							printf("---------------------------------")
-							if (switchReqDelay >= 0) then
-								if (count > 1000) then
-									printf("Not Logging!")
-								else
+							-- if (switchReqDelay >= 0) then
+								-- if (count > 1000) then
+								-- 	printf("Not Logging!")
+								-- else
 									fp:write(("%d, %d, %d, %d, %d, %d\n"):format(count, switchReqDelay, switchDelay, respEgressDelay, nic_wire_delay, lat))
-								end
-							end
+								-- end
+							-- end
 							rxBufs:freeAll()
 							return
 					end
