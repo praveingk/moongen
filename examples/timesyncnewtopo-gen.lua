@@ -102,24 +102,22 @@ function master(args)
 	--stats.startStatsTask{txDev, tx1Dev}
   fp = io.open("/etc/hostname", "rb");
   local hostname = fp:read "*a"
-  printf("Running on %s\n", hostname);
   -- Minion and hajime are placeholders for pumping s2s traffic
-  if hostname ~= "minion1" then
+  if hostname == "minion1\n" then
+    printf("Running on minion\n");
     file = "timesync_h1h5.csv"
     mg.startTask("InitiateTimesyncNetwork_minion", txDev, txNwQueue, rxQueue)
     mg.startSharedTask("initiateTimesyncHost_minion", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
-  else
-    if  hostname ~= "hajime" then
+  elseif  hostname == "hajime" then
+      printf("Running on hajime\n");
       file = "timesync_h3h4.csv"
       mg.startTask("InitiateTimesyncNetwork_hajime", txDev, txNwQueue, rxQueue)
       mg.startSharedTask("initiateTimesyncHost_hajime", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
-    end
-  else
-    if  hostname ~= "tina" then
+  elseif  hostname == "tina" then
+    printf("Running on tina\n");
       file = "timesync_h2h7.csv"
       mg.startTask("InitiateTimesyncNetwork_tina", txDev, txNwQueue, rxQueue)
       mg.startSharedTask("initiateTimesyncHost_tina", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
-    end
   end
 
 
@@ -235,8 +233,8 @@ function InitiateTimesyncNetwork_minion(txDev, txQueue, rxQueue)
 		mg.sleepMillis(2000)
 		initiateTimesyncSwitch1(txDev, txQueue, rxQueue, file, mem1)
 		mg.sleepMillis(2000)
-		initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem3)
-    mg.sleepMillis(2000)
+		-- initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem3)
+    -- mg.sleepMillis(2000)
 	end
 end
 
