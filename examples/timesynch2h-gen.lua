@@ -16,8 +16,9 @@ local libmoon = require "libmoon"
 local ETHLOOP_SRC	= "10:00:00:00:00:01"
 local ETHLOOP_DST = "20:00:00:00:00:02"
 
+local MINION_HOST3	= "3C:FD:FE:B7:E8:E8"
+local MINION_HOST4	= "3C:FD:FE:B7:E8:E9"
 
-local TYPE_TS = 0x1235
 local PKT_SIZE	= 34
 local UDP_PKT_SIZE = 1000
 
@@ -38,7 +39,7 @@ function master(args)
 	tx2Dev = device.config({port = args.tx2Dev, rxQueues = 2, txQueues = 2})
   device.waitForLinks()
 	txQueue = tx1Dev:getTxQueue(1)
-	rxQueue = tx2Dev:getTxQueue(1)
+	rxQueue = tx2Dev:getRxQueue(1)
 
 	txQueue:enableTimestamps()
 	rxQueue:enableTimestamps()
@@ -60,7 +61,7 @@ function master(args)
 	--   --stats.startStatsTask{dev1, dev2}
 	end
 
-	stats.startStatsTask{tx1Dev, tx2Dev}
+	--stats.startStatsTask{tx1Dev, tx2Dev}
   mg.startTask("initiateTimesync", tx1Dev, tx2Dev, txQueue, rxQueue, args.file, args.c)
   mg.waitForTasks()
 
@@ -114,25 +115,26 @@ function initiateTimesynch2h(txDev, rxDev, txQueue, rxQueue, file, crossTraffic)
 	local i = 0
 	mg.sleepMillis(1000)
 	fp = io.open(file, "w")
-	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
 	local mem = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
-			ethSrc = ETHLOOP_SRC,
-			ethDst = ETHLOOP_DST,
+			ethSrc = MINION_HOST3,
+			ethDst = MINION_HOST4,
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
 		}
 	end)
 	while mg.running() do
 		i = i + 1
-		startTimesynch2h(i, mem, txDev, rxDev txQueue, rxQueue, fp, crossTraffic)
+		syncClocks(txDev, rxDev)
+		mg.sleepMillis(1)
+		startTimesynch2h(i, mem, txDev, rxDev, txQueue, rxQueue, fp)
 		mg.sleepMillis(2000)
 	end
 	fp:close();
 end
 
 
-function startTimesynch2h(count, mem, txDev, rxDev, txQueue, rxQueue, fp, crossTraffic)
+function startTimesynch2h(count, mem, txDev, rxDev, txQueue, rxQueue, fp)
 	local maxWait = 15/1000
 
 	txQueue:enableTimestamps()
@@ -177,7 +179,9 @@ function startTimesynch2h(count, mem, txDev, rxDev, txQueue, rxQueue, fp, crossT
 					--local rxPkt = rxBuf:getUdpPtpPacket()
 					--printf("%d",rxPkt.timesync:getReference_ts_hi())
 					local rxTs = rxQueue:getTimestamp(nil, timesync)
-					--printf("Recv ts = %u", rxTs)
+          printf("Req ts = %u", txReqTs)
+
+					printf("Recv ts = %u", rxTs)
 					rxPkt:dump()
 					printf(green(rxPkt.timesync:getString()))
 					local lat = rxTs - txReqTs
@@ -205,3 +209,4 @@ function syncClocks(dev1, dev2)
 	dev1:resetTimeCounters()
 	dev2:resetTimeCounters()
 end
+nd
