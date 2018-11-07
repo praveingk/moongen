@@ -107,7 +107,7 @@ function master(args)
     printf("Running on minion\n");
     file = "timesync_h1h5.csv"
     mg.startTask("InitiateTimesyncNetwork_minion", txDev, txNwQueue, rxQueue)
-    mg.startSharedTask("initiateTimesyncHost_minion", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
+    --mg.startSharedTask("initiateTimesyncHost_minion", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
   elseif  hostname == "hajime" then
       printf("Running on hajime\n");
       file = "timesync_h3h4.csv"
