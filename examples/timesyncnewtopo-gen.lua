@@ -107,17 +107,17 @@ function master(args)
     printf("Running on minion\n");
     file = "timesync_h1h5.csv"
     mg.startTask("InitiateTimesyncNetwork_minion", txDev, txNwQueue, rxQueue)
-    mg.startSharedTask("initiateTimesyncHost_minion", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
-  elseif  hostname == "hajime" then
+    --mg.startSharedTask("initiateTimesyncHost_minion", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
+  elseif  hostname == "hajime\n" then
       printf("Running on hajime\n");
       file = "timesync_h3h4.csv"
       mg.startTask("InitiateTimesyncNetwork_hajime", txDev, txNwQueue, rxQueue)
       mg.startSharedTask("initiateTimesyncHost_hajime", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
-  elseif  hostname == "tina" then
+  elseif  hostname == "tina\n" then
     printf("Running on tina\n");
       file = "timesync_h2h7.csv"
       mg.startTask("InitiateTimesyncNetwork_tina", txDev, txNwQueue, rxQueue)
-      mg.startSharedTask("initiateTimesyncHost_tina", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
+      --mg.startSharedTask("initiateTimesyncHost_tina", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
   end
 
 
@@ -266,9 +266,9 @@ function InitiateTimesyncNetwork_tina(txDev, txQueue, rxQueue)
 	while mg.running() do
 		initiateTimesyncSwitch6(txDev, txQueue, rxQueue, file, mem6)
 		mg.sleepMillis(2000)
-		initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem3)
-		mg.sleepMillis(2000)
 		initiateTimesyncSwitch2(txDev, txQueue, rxQueue, file, mem2)
+		mg.sleepMillis(2000)
+		initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file, mem4)
     mg.sleepMillis(2000)
 	end
 end
@@ -309,6 +309,19 @@ function initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem)
 		--mg.sleepMillis(10)
 	--end
 end
+
+function initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file, mem)
+	local i = 0
+	--mg.sleepMillis(1000)
+
+	txDev:setPromisc(true)
+	--while mg.running() do
+		i = i + 1
+    startTimesyncs2s(mem,txQueue)
+		--mg.sleepMillis(10)
+	--end
+end
+
 
 function initiateTimesyncSwitch5(txDev, txQueue, rxQueue, file, mem)
 	local i = 0
