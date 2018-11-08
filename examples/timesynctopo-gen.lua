@@ -139,101 +139,105 @@ function CrossTraffic(queue)
 end
 
 function InitiateTopoTimesync(txDev, txQueue, rxQueue, file)
+  local mem1 = memory.createMemPool(function(buf)
+    buf:getTimesyncPacket():fill{
+      ethSrc = SWITCH1,
+      ethDst = SWITCH3_PORT1,
+      ethType = proto.eth.TYPE_TS,
+      command = proto.timesync.TYPE_REQ,
+    }
+  end)
+  local mem2 = memory.createMemPool(function(buf)
+    buf:getTimesyncPacket():fill{
+      ethSrc = SWITCH2,
+      ethDst = SWITCH4_PORT1,
+      ethType = proto.eth.TYPE_TS,
+      command = proto.timesync.TYPE_REQ,
+    }
+  end)
+  local mem3 = memory.createMemPool(function(buf)
+    buf:getTimesyncPacket():fill{
+      ethSrc = SWITCH3_PORT2,
+      ethDst = SWITCHMASTER_PORT1,
+      ethType = proto.eth.TYPE_TS,
+      command = proto.timesync.TYPE_REQ,
+    }
+  end)
+  local mem4 = memory.createMemPool(function(buf)
+    buf:getTimesyncPacket():fill{
+      ethSrc = SWITCH4_PORT2,
+      ethDst = SWITCHMASTER_PORT2,
+      ethType = proto.eth.TYPE_TS,
+      command = proto.timesync.TYPE_REQ,
+    }
+  end)
 	while mg.running() do
-		initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file)
-		mg.sleepMillis(200)
-		initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file)
-		mg.sleepMillis(200)
-		initiateTimesyncSwitch2(txDev, txQueue, rxQueue, file)
-		mg.sleepMillis(200)
-		initiateTimesyncSwitch1(txDev, txQueue, rxQueue, file)
-		mg.sleepMillis(200)
+		initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem3)
+		mg.sleepMillis(10)
+		initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file, mem4)
+		mg.sleepMillis(10)
+		initiateTimesyncSwitch2(txDev, txQueue, rxQueue, file, mem2)
+		mg.sleepMillis(10)
+		initiateTimesyncSwitch1(txDev, txQueue, rxQueue, file, mem1)
+		mg.sleepMillis(10)
 	end
 end
-function initiateTimesyncSwitch1(txDev, txQueue, rxQueue, file)
+function initiateTimesyncSwitch1(txDev, txQueue, rxQueue, file, mem)
 	local i = 0
-	mg.sleepMillis(1000)
+	--mg.sleepMillis(1000)
 	fp = io.open(file, "w")
 	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
-	local mem = memory.createMemPool(function(buf)
-		buf:getTimesyncPacket():fill{
-			ethSrc = SWITCH1,
-			ethDst = SWITCH3_PORT1,
-			ethType = proto.eth.TYPE_TS,
-			command = proto.timesync.TYPE_REQ,
-		}
-	end)
+
 	txDev:setPromisc(true)
 	--while mg.running() do
 		i = i + 1
 		startTimesyncs2s(i, mem, txDev, txQueue, rxQueue, fp)
-		mg.sleepMillis(2000)
+		--mg.sleepMillis(10)
 	--end
 	fp:close();
 end
 
-function initiateTimesyncSwitch2(txDev, txQueue, rxQueue, file)
+function initiateTimesyncSwitch2(txDev, txQueue, rxQueue, file, mem)
 	local i = 0
-	mg.sleepMillis(1000)
+	--mg.sleepMillis(1000)
 	fp = io.open(file, "w")
 	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
-	local mem = memory.createMemPool(function(buf)
-		buf:getTimesyncPacket():fill{
-			ethSrc = SWITCH2,
-			ethDst = SWITCH4_PORT1,
-			ethType = proto.eth.TYPE_TS,
-			command = proto.timesync.TYPE_REQ,
-		}
-	end)
+
 	txDev:setPromisc(true)
 	--while mg.running() do
 		i = i + 1
 		startTimesyncs2s(i, mem, txDev, txQueue, rxQueue, fp, crossTraffic)
-		mg.sleepMillis(2000)
+		--mg.sleepMillis(10)
 	--end
 	fp:close();
 end
 
-function initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file)
+function initiateTimesyncSwitch3(txDev, txQueue, rxQueue, file, mem)
 	local i = 0
-	mg.sleepMillis(1000)
+	--mg.sleepMillis(1000)
 	fp = io.open(file, "w")
 	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
-	local mem = memory.createMemPool(function(buf)
-		buf:getTimesyncPacket():fill{
-			ethSrc = SWITCH3_PORT2,
-			ethDst = SWITCHMASTER_PORT1,
-			ethType = proto.eth.TYPE_TS,
-			command = proto.timesync.TYPE_REQ,
-		}
-	end)
+
 	txDev:setPromisc(true)
 	--while mg.running() do
 		i = i + 1
 		startTimesyncs2s(i, mem, txDev, txQueue, rxQueue, fp)
-		mg.sleepMillis(2000)
+		--mg.sleepMillis(2000)
 	--end
 	fp:close();
 end
 
-function initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file)
+function initiateTimesyncSwitch4(txDev, txQueue, rxQueue, file, mem)
 	local i = 0
-	mg.sleepMillis(1000)
+	--mg.sleepMillis(1000)
 	fp = io.open(file, "w")
 	fp:write("count, replydelay_ntp, replydelay_switchdelaybased, replydelay_2probe, replydelay_2probe_simple, upstreamOffset, switchDelay\n")
-	local mem = memory.createMemPool(function(buf)
-		buf:getTimesyncPacket():fill{
-			ethSrc = SWITCH4_PORT2,
-			ethDst = SWITCHMASTER_PORT2,
-			ethType = proto.eth.TYPE_TS,
-			command = proto.timesync.TYPE_REQ,
-		}
-	end)
+
 	txDev:setPromisc(true)
 	--while mg.running() do
 		i = i + 1
 		startTimesyncs2s(i, mem, txDev, txQueue, rxQueue, fp)
-		mg.sleepMillis(2000)
+		--mg.sleepMillis(2000)
 	--end
 	fp:close();
 end
@@ -250,7 +254,7 @@ function startTimesyncs2s(count, mem, txDev, txQueue, rxQueue, fp)
 	local txBuf = txBufs[1]
 	--printf("Enabling Tx Timestamps..")
 	txBuf:enableTimestamps()
-	txBuf:dump()
+	-- txBuf:dump()
 
 	--printf("Enabling timestamp for udp port %d\n", buf:getUdpPacket().udp:getDstPort())
   --while mg.running() do
@@ -271,8 +275,8 @@ function startTimesyncs2s(count, mem, txDev, txQueue, rxQueue, fp)
 			for i=1,rx do
 				--printf("Packet Received")
 				--printf("%d",i);
-				local rxBuf = rxBufs[i]
-				rxBuf:dump()
+				-- local rxBuf = rxBufs[i]
+				-- rxBuf:dump()
 			end
 		end
 end
