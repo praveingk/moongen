@@ -111,7 +111,7 @@ function master(args)
   elseif  hostname == "hajime\n" then
       printf("Running on hajime\n");
       file = "timesync_h3h4.csv"
-      mg.startTask("InitiateTimesyncNetwork_hajime", txDev, txNwQueue, rxQueue)
+      --mg.startTask("InitiateTimesyncNetwork_hajime", txDev, txNwQueue, rxQueue)
       mg.startSharedTask("initiateTimesyncHost_hajime", txDev, txQueue, rxQueue, tx1Dev, tx1Queue, rx1Queue, file)
   elseif  hostname == "tina\n" then
     printf("Running on tina\n");
@@ -355,14 +355,14 @@ function startTimesyncs2s(mem, txQueue)
 end
 
 
-function initiateTimesyncHost_minion(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queue, rx2Queue, file)
+function initiateTimesyncHost_hajime(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queue, rx2Queue, file)
 	local i = 0
 	mg.sleepMillis(1000)
 	fp = io.open(file, "w")
 	local mem1 = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
 			ethSrc = tx1Queue,
-			ethDst = SWITCH1, --BCAST,
+			ethDst = SWITCH2, --BCAST,
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
 		}
@@ -370,7 +370,7 @@ function initiateTimesyncHost_minion(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queu
 	local mem2 = memory.createMemPool(function(buf)
 		buf:getTimesyncPacket():fill{
 			ethSrc = tx2Queue,
-			ethDst = SWITCH3,--BCAST,--
+			ethDst = SWITCH2,--BCAST,--
 			ethType = proto.eth.TYPE_TS,
 			command = proto.timesync.TYPE_REQ,
 		}
@@ -405,7 +405,7 @@ function initiateTimesyncHost_minion(tx1Dev, tx1Queue, rx1Queue, tx2Dev, tx2Queu
 
 			end
 		end
-		mg.sleepMillis(1000)
+		mg.sleepMillis(10)
 	end
 	fp:close();
 end
