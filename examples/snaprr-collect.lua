@@ -129,8 +129,10 @@ function initiateCollect(rxQueue, count)
 			if (rxPkt.eth:getType() == proto.eth.TYPE_TRIGGER) then
 				rxBuf:dump()
 				rxPkt = rxBuf:getTriggerPacket()
+				rawPkt = rxBuf:getBytes()
+				time_pt = 18
 				if rxPkt.trigger:getId() ~= trigger_id then
-					fp:write(("Trigger, %d, %d, %d\n"):format(rxPkt.trigger:getId(), rxPkt.trigger:getTriggerTime(), rxPkt.trigger:getOrigin()))
+					fp:write(("Trigger,%d,%x%x%x%x,%s\n"):format(rxPkt.trigger:getId(), rawPkt[time_pt], rawPkt[time_pt+1], rawPkt[time_pt+2], rawPkt[time_pt+3], rxPkt.eth:getSrcString()))
 					trigger_id = rxPkt.trigger:getId()
 				end
 			end
