@@ -47,15 +47,13 @@ local HOST9 = "a0:00:00:20:00:0a"
 
 local TYPE_TS = 0x1235
 local TOTAL_SWITCHES = 3
-local UDP_PKT_SIZE = 1500
+local UDP_PKT_SIZE = 64
 
 function configure(parser)
 	parser:description("Receives and stores the snaprr collection.")
 	parser:argument("rxDev", "Device to receive from."):convert(tonumber)
 	parser:option("-f --file", "Filename for collecting the replay"):default("snaprr_collect.txt")
 	parser:option("-c", "Start CrossTraffic"):default(0):convert(tonumber)
-	parser:option("-r --rate", "Background traffic rate in Mbit/s."):default(4000):convert(tonumber):target("rate")
-
 end
 
 function master(args)
@@ -65,8 +63,6 @@ function master(args)
 	local count = 1
   stats.startStatsTask{rxDev}
   --mg.startTask("initiateCollect", rxQueue, count)
-	rxDev:getTxQueue(0):setRate(args.rate)
-
 	if args.c == 1 then
 		mg.startSharedTask("CrossTraffic", rxDev:getTxQueue(0))
 	end
@@ -97,11 +93,14 @@ function CrossTraffic(queue)
 		i = i +1
 	end
 
-	while true do
-		--bufs[1]:dump()
-		queue:send(bufs)
-		--mg.sleepMillis(10)
-		--check_id = check_id + 1
+	while mg.running() do
+		--bufs:alloc(size)
+		for _, buf in ipairs(bufs) do
+			-- this script uses 10Mpps
+			buf:setDelay(poissonDelay(10^10 / 8 / (10 * 10^6) - UDP_PKT_SIZE - 24))
+			--buf:setRate(rate)
+		end
+		queue:sendWithDelay(bufs)
 	end
 end
 
