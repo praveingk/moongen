@@ -21,10 +21,15 @@ local ETH_SRC1	= "3c:fd:fe:b7:e7:f5"
 local BCAST = "FF:FF:FF:FF:FF:FF"
 local DUMMY_DST = "3c:fd:fe:b7:e7:f9"
 
-local SWITCH1	= "10:00:00:00:00:01"
-local SWITCH2	= "20:00:00:00:00:02"
-local SWITCH3	= "30:00:00:00:00:03"
-local SWITCH4	= "40:00:00:00:00:04"
+local SWITCH1	= "00:00:00:00:00:01"
+local SWITCH1_PORT1	= "00:00:00:10:00:01"
+
+local SWITCH2	= "00:00:00:00:00:02"
+local SWITCH3	= "00:00:00:00:00:03"
+local SWITCH4	= "00:00:00:00:00:04"
+local SWITCH4_PORT2	= "00:00:00:20:00:04"
+
+local SWITCH10_PORT2 = "00:00:00:20:00:0A"
 
 local SWITCH5_PORT1	= "50:00:00:10:00:05"
 local SWITCH5_PORT2	= "50:00:00:20:00:05"
@@ -149,15 +154,15 @@ end
 function InitiateDPTPNetwork(txDev, txQueue, rxQueue)
   local mem1 = memory.createMemPool(function(buf)
     buf:getTimesyncPacket():fill{
-      ethSrc = SWITCH1,
-      ethDst = SWITCHMASTER_PORT1,
+      ethSrc = SWITCH1_PORT1,
+      ethDst = SWITCH4_PORT2,
       ethType = proto.eth.TYPE_TS,
       command = proto.timesync.TYPE_REQ,
     }
   end)
 	while mg.running() do
 		initiateDPTPSwitch(txDev, txQueue, rxQueue, file, mem1)
-		mg.sleepMillis(2000) --Change this as per your need
+		mg.sleepMillis(10) --Change this as per your need
 	end
 end
 

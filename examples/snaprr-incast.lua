@@ -51,40 +51,34 @@ local UDP_PKT_SIZE = 1500
 
 function configure(parser)
 	parser:description("Receives and stores the snaprr collection.")
-	parser:argument("rxDev", "Device to receive from."):convert(tonumber)
-	--parser:argument("rx1Dev", "Device to receive from."):convert(tonumber)
+	parser:argument("txDev", "Device to receive from."):convert(tonumber)
+	parser:argument("tx1Dev", "Device to receive from."):convert(tonumber)
 	parser:option("-f --file", "Filename for collecting the replay"):default("snaprr_collect.txt")
-	parser:option("-c", "Start CrossTraffic"):default(0):convert(tonumber)
 	parser:option("-r --rate", "Background traffic rate in Mbit/s."):default(4000):convert(tonumber):target("rate")
 
 end
 
 function master(args)
-  rxDev = device.config({port = args.rxDev, rxQueues = 1, txQueues = 1})
-	rx1Dev = device.config({port = 0, rxQueues = 1, txQueues = 1})
+  txDev = device.config({port = args.txDev, rxQueues = 1, txQueues = 1})
+	tx1Dev = device.config({port = args.tx1Dev, rxQueues = 1, txQueues = 1})
 
   device.waitForLinks()
-	rxQueue = rxDev:getRxQueue(0)
-	rx1Queue = rx1Dev:getRxQueue(0)
 
 	local count = 1
-  stats.startStatsTask{rxDev}
-	stats.startStatsTask{rx1Dev}
+  stats.startStatsTask{txDev}
+	stats.startStatsTask{tx1Dev}
 
   --mg.startTask("initiateCollect", rxQueue, count)
-	rxDev:getTxQueue(0):setRate(args.rate)
-	rx1Dev:getTxQueue(0):setRate(args.rate)
+	txDev:getTxQueue(0):setRate(args.rate)
+	tx1Dev:getTxQueue(0):setRate(args.rate)
 
-	if args.c == 1 then
-		mg.startSharedTask("CrossTraffic", rxDev:getTxQueue(0))
-		mg.startSharedTask("CrossTraffic1", rx1Dev:getTxQueue(0))
-
-	end
+	mg.startSharedTask("incast", txDev:getTxQueue(0))
+	mg.startSharedTask("incast", tx1Dev:getTxQueue(0))
   mg.waitForTasks()
 
 end
 
-function CrossTraffic(queue)
+function incast(queue)
 	local mem = memory.createMemPool(function(buf)
 		buf:getUdpPacket():fill{
 			ethSrc = queue,
@@ -106,12 +100,8 @@ function CrossTraffic(queue)
 		txBuf:getUdpPacket().udp:setLength(0)
 		i = i +1
 	end
-
 	while true do
-		--bufs[1]:dump()
 		queue:send(bufs)
-		--mg.sleepMillis(10)
-		--check_id = check_id + 1
 	end
 end
 
