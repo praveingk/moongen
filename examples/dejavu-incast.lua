@@ -54,7 +54,7 @@ function configure(parser)
 	parser:argument("txDev", "Device to receive from."):convert(tonumber)
 	parser:argument("tx1Dev", "Device to receive from."):convert(tonumber)
 	parser:option("-f --file", "Filename for collecting the replay"):default("snaprr_collect.txt")
-	parser:option("-r --rate", "Background traffic rate in Mbit/s."):default(4000):convert(tonumber):target("rate")
+	parser:option("-r --rate", "Background traffic rate in Mbit/s."):default(1000):convert(tonumber):target("rate")
 
 end
 
