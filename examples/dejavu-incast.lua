@@ -44,6 +44,13 @@ local HOST8	= "40:00:00:20:00:04"
 local HOST8 = "a0:00:00:10:00:0a"
 local HOST9 = "a0:00:00:20:00:0a"
 
+local IP1 = "10.0.0.1"
+local IP2 = "10.0.0.2"
+local IP3 = "10.0.0.3"
+local IP4 = "10.0.0.4"
+local IP5 = "10.0.0.5"
+local IP6 = "10.0.0.6"
+local IP7 = "10.0.0.7"
 
 local TYPE_TS = 0x1235
 local TOTAL_SWITCHES = 3
@@ -72,19 +79,19 @@ function master(args)
 	txDev:getTxQueue(0):setRate(args.rate)
 	tx1Dev:getTxQueue(0):setRate(args.rate)
 
-	mg.startSharedTask("incast", txDev:getTxQueue(0))
-	mg.startSharedTask("incast", tx1Dev:getTxQueue(0))
+	mg.startSharedTask("incast", txDev:getTxQueue(0), IP1, IP7)
+	mg.startSharedTask("incast", tx1Dev:getTxQueue(0), IP2, IP7)
   mg.waitForTasks()
 
 end
 
-function incast(queue)
+function incast(queue, SIP, DIP)
 	local mem = memory.createMemPool(function(buf)
 		buf:getUdpPacket():fill{
 			ethSrc = queue,
 			ethDst = MINION_HOST1,
-			ip4Src = SRC_IP,
-			ip4Dst = DST_IP,
+			ip4Src = SIP,
+			ip4Dst = DIP,
 			udpSrc = SRC_PORT,
 			udpDst = DST_PORT,
 			pktLength = UDP_PKT_SIZE
@@ -100,6 +107,7 @@ function incast(queue)
 		txBuf:getUdpPacket().udp:setLength(0)
 		i = i +1
 	end
+	bufs[1]:dump()
 	while true do
 		queue:send(bufs)
 	end
