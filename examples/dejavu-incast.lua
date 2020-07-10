@@ -76,11 +76,11 @@ function master(args)
 	stats.startStatsTask{tx1Dev}
 
   --mg.startTask("initiateCollect", rxQueue, count)
-	txDev:getTxQueue(0):setRate(args.rate)
+	txDev:getTxQueue(0):setRate(3000)
 	tx1Dev:getTxQueue(0):setRate(args.rate)
 
-	mg.startSharedTask("incast", txDev:getTxQueue(0), IP1, IP7)
-	mg.startSharedTask("incast", tx1Dev:getTxQueue(0), IP2, IP7)
+	mg.startSharedTask("incast", txDev:getTxQueue(0), IP5, IP7)
+	mg.startSharedTask("incast", tx1Dev:getTxQueue(0), IP6, IP7)
   mg.waitForTasks()
 
 end
